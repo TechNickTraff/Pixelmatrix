@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Pixel Art</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="./style.css" />
+    </head>
+    <body>
+        <div id="app">
+            <div class="controls">
+                <input placeholder="Name" type="text" id="name" name="name">
+                <button id="clear">Clear</button>
+                <button id="save">Save</button>
+            </div>
+            <div class="radio-group">
+                <div class="radio">
+                    <input class="frame-selector" id="frame-1" name="radio" type="radio" data-frame="1" checked>
+                    <label for="frame-1" class="radio-label">1</label>
+                </div>
+                <div class="radio">
+                    <input class="frame-selector" id="frame-2" name="radio" type="radio"  data-frame="2">
+                    <label  for="frame-2" class="radio-label">2</label>
+                </div>
+                <div class="radio">
+                    <input class="frame-selector" id="frame-3" name="radio" type="radio" data-frame="3">
+                    <label for="frame-3" class="radio-label">3</label>
+                </div>
+                <div class="radio">
+                    <input class="frame-selector" id="frame-4" name="radio" type="radio" data-frame="4">
+                    <label for="frame-4" class="radio-label">4</label>
+                </div>
+                <div class="radio">
+                    <input class="frame-selector" id="frame-5" name="radio" type="radio" data-frame="5">
+                    <label for="frame-5" class="radio-label">5</label>
+                </div>
+                <div class="radio">
+                    <input id="timing" type="number" min="1" value="100">
+                    <span>ms</span>
+                </div>
+            </div>
+            <canvas id="canvas" width="512px" height="512px"></canvas>
+            <div class="container">
+                <p class="info-text">
+                    Right click to change color. Cell(<span id="cell-index">0, 0</span>)
+                </p>
+                <div class="swatch-color eraser" index="0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-75 -75 600 600">
+                        <path d="M418.4 192.331c19.8-19.8 19.8-51.9 0-71.7l-.1-.1-78.6-78.3c-19.8-19.8-51.9-19.7-71.8 0l-169.5 169.6-54.2 54.1c-19.8 19.7-19.8 51.8-.1 71.6l48.3 48.3H10c-5.5 0-10 4.5-10 10s4.5 10 10 10h297.4c5.5 0 10-4.5 10-10s-4.5-10-10-10H225l23.9-23.7 169.5-169.8zm-221.7 193.5h-76.1l-62.3-62.4c-12-12-11.9-31.4 0-43.4l47.1-47 122.2 122-30.9 30.8zm-77.1-166.9 162.5-162.5c12-12 31.5-12 43.5 0l78.6 78.4c12 12 12 31.4 0 43.5l-162.4 162.8-122.2-122.2z"/>
+                    </svg>
+                </div>
+                <div class="swatch-color" index="1" title="Right click to change color"></div>
+                <div class="swatch-color" index="2" title="Right click to change color"></div>
+                <div class="swatch-color" index="3" title="Right click to change color"></div>
+                <div class="swatch-color" index="4" title="Right click to change color"></div>
+                <div class="swatch-color" index="5" title="Right click to change color"></div>
+            </div>
+            <div class="container">
+                <h4>Presets</h4>
+                <div id="gallery"></div>
+                <h4>Special</h4>
+                <label for="image-load">Import</label>
+                <input type="file" id="image-load" name="image-load" />
+            </div>
+        </div>
+    </body>
+    <script type="module" src="./main.mjs"></script>
+</html>
