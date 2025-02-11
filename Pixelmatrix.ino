@@ -115,24 +115,21 @@ void setup() {
 }
 
 void drawBitmap(JsonDocument animation, int index) {
+
   FastLED.clear();
   bool LTR = true;
-  for (int i = 0; i < NUM_LEDS; i++) {
+  for (int i = 0; i < NUM_LEDS; i += COLS) {
     if (LTR) {
       for (int j = 0; j < COLS; j++) {
-        String pixel = animation["data"][index][i + j];
-        pixel.replace("#", "0x");
-        leds[i + j] = strtol(pixel.c_str(), NULL, 0);
+        const char *p = animation["data"][index][i + j].as<const char*>();
+        leds[i + j] = strtol(p+1, NULL, 16);
       }
     } else {
       for (int j = COLS; j > 0; j--) {
-        String pixel = animation["data"][index][i + j - 1];
-        pixel.replace("#", "0x");
-        leds[i + COLS - j] = strtol(pixel.c_str(), NULL, 0);
+        const char *p = animation["data"][index][i + COLS - j].as<const char*>();
+        leds[i + COLS - j] = strtol(p+1, NULL, 16);
       }
     }
-
-    i = i + COLS - 1;
     LTR = !LTR;
   }
 
