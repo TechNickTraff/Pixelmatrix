@@ -116,21 +116,19 @@ void setup() {
 
 void drawBitmap(JsonDocument animation, int index) {
 
+  int row;
+  int pixelIndex;
+
   FastLED.clear();
-  bool LTR = true;
-  for (int i = 0; i < NUM_LEDS; i += COLS) {
-    if (LTR) {
-      for (int j = 0; j < COLS; j++) {
-        const char *p = animation["data"][index][i + j].as<const char*>();
-        leds[i + j] = strtol(p+1, NULL, 16);
-      }
-    } else {
-      for (int j = COLS; j > 0; j--) {
-        const char *p = animation["data"][index][i + COLS - j].as<const char*>();
-        leds[i + COLS - j] = strtol(p+1, NULL, 16);
-      }
+
+  for (int i = 0; i < NUM_LEDS; i += COLS) {  // i is the pixel index, incremented by the length of a row
+    for (int j = 0; j < COLS; j++) {          // j is the column index, always traversed from 0 to COLS
+      row = i / COLS;                               // row is the row index, ranging from 0 to 15
+      pixelIndex = row % 2 == 0 ? j : COLS - j - 1; // pixelIndex is j translated depending on even/odd row
+
+      const char *p = animation["data"][index][i + pixelIndex].as<const char*>();
+      leds[i + pixelIndex] = strtol(p+1, NULL, 16); // p+1 to skip char '#' at index 0, strtol with base 16 to convert hex to long
     }
-    LTR = !LTR;
   }
 
   FastLED.show();
