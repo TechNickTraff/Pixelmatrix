@@ -24,6 +24,44 @@ Afterwards run `npm run build` to generate the correct files in the __sd__ Folde
 ## Build Arduino
 Either click the Button in the Arduino IDE or use the Arduino CLI command `arduino-cli compile`.
 
+### Using the Arduino CLI
+
+Using `arduino-cli` and compiling the project is unfortunately a bit more involved than running `arduino-cli compile .` in the project directory but very instructive.
+Below are some pointers to overcome common issues when using `arduino-cli`. Additionally, a `Makefile` is provided to simplify the process.
+
+**Installing Dependencies**
+
+When managing the project through `arduino-cli`, the dependencies are not installed automatically. You have to install them manually:
+
+```bash
+$> arduino-cli lib install SD FastLED WiFiNINA ArduinoJson
+```
+
+**Main sketch filename**
+
+Compiling the project requires that the main sketch file has the same name as the project directory.
+
+- Running `arduino-cli compile --fqbn [..] .` will fail if the main sketch file is not named the same as the repository -
+that is, if the repository is called `Pixelmatrix`, the main sketch file should be called `Pixelmatrix.ino`.
+
+**User permissions**
+
+The flash may initially fail since the user typically does not have write permissions on the serial TTYs by default. This can be fixed by adding the user to the proper group (e.g. `dialout`, `uucp` or `tty`).
+
+- Quick fix: `sudo chmod 666 /dev/ttyACM0` (or whatever the port is)
+- Doing it properly:
+  - Run `arduino-cli board list` to get the port of the Arduino, e.g. `/dev/ttyACM0`.
+  - `ls -l /dev/ttyA*` to get the group of the device (`uucp` in my case).
+  - `sudo usermod -aG uucp $USER` to add yourself to the group.
+  - Log out and log back in to apply the changes.
+
+**Monitoring the serial output**
+
+Using `arduino-cli` to monitor the serial port, you are typically not fast enough to catch the sketch reporting its IP address.
+
+- To circumvent this issue, a macro `DEBUG_SERIAL` can be defined which delays the setup of the sketch *until* a serial connection is established.
+- To compile the sketch with the `DEBUG_SERIAL` macro, run `arduino-cli compile --fqbn [..] --build-property build.extra_flags="-DDEBUG_SERIAL" .`.
+
 ## Knowlege base
 ### [Custom IDE] Arduino.h not found
 Arduino.h is from the [Arduino Core Project](https://github.com/arduino/ArduinoCore-avr/blob/master/cores/arduino/Arduino.h).

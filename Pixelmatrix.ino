@@ -52,6 +52,10 @@ void setup() {
   ////// LED STRIP
   delay(3000);  // power-up safety delay
   Serial.begin(9600);
+  
+  #ifdef DEBUG_SERIAL
+  while (!Serial);  // Wait for serial port to connect
+  #endif
 
   FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS);
   FastLED.setBrightness(BRIGHTNESS);
