@@ -39,12 +39,22 @@ struct Request {
   String body;
 };
 
+//struct Animation {
+//  int id;
+//  int frame_amount;
+//  int timing;
+//  JsonDocument data;
+//};
 struct Animation {
-  int id;
-  int frame_amount;
-  int timing;
-  JsonDocument data;
+    int id;
+    int timing;
+    int frame_amount;
+    File file;  // Keep reference to the open file
+    int currentFrameIndex;
+    //unsigned long frameDataPosition;
+    CRGB frameBuffer[16 * 16];  // Store only one frame at a time
 };
+
 
 Animation current_animation;
 
@@ -105,7 +115,7 @@ void setup() {
       while(true)
         ;
     }
-    current_animation = loadAnimation(selectedFile);
+    loadAnimation(selectedFile);
   } else {
     Serial.println(F("Please create the /gallery directory on the sd card"));
     while(true)
@@ -114,30 +124,120 @@ void setup() {
   /////// END SD
 }
 
-void drawBitmap(JsonDocument animation, int index) {
+//void drawBitmap(JsonDocument animation, int index) {
+//
+//  int row;
+//  int pixelIndex;
+//
+//  FastLED.clear();
+//
+//  for (int i = 0; i < NUM_LEDS; i += COLS) {  // i is the pixel index, incremented by the length of a row
+//    for (int j = 0; j < COLS; j++) {          // j is the column index, always traversed from 0 to COLS
+//      row = i / COLS;                               // row is the row index, ranging from 0 to 15
+//      pixelIndex = row % 2 == 0 ? j : COLS - j - 1; // pixelIndex is j translated depending on even/odd row
+//
+//      const char *p = animation["data"][index][i + pixelIndex].as<const char*>();
+//      leds[i + pixelIndex] = strtol(p+1, NULL, 16); // p+1 to skip char '#' at index 0, strtol with base 16 to convert hex to long
+//    }
+//  }
+//
+//  FastLED.show();
+//}
 
+void drawBitmap(CRGB *bitmap) {
   int row;
   int pixelIndex;
 
   FastLED.clear();
-
   for (int i = 0; i < NUM_LEDS; i += COLS) {  // i is the pixel index, incremented by the length of a row
     for (int j = 0; j < COLS; j++) {          // j is the column index, always traversed from 0 to COLS
       row = i / COLS;                               // row is the row index, ranging from 0 to 15
       pixelIndex = row % 2 == 0 ? j : COLS - j - 1; // pixelIndex is j translated depending on even/odd row
 
-      const char *p = animation["data"][index][i + pixelIndex].as<const char*>();
-      leds[i + pixelIndex] = strtol(p+1, NULL, 16); // p+1 to skip char '#' at index 0, strtol with base 16 to convert hex to long
+      leds[i + pixelIndex] = bitmap[i + pixelIndex];
     }
   }
-
   FastLED.show();
 }
 
-void drawAnimation(Animation animation) {
-  int frame = floor(millis() / animation.timing);
-  drawBitmap(animation.data, frame % animation.frame_amount);
+void drawAnimation(Animation &animation) {
+    int frameIndex = (millis() / animation.timing) % animation.frame_amount;
+
+    // Only reload the frame if it's different from the last one
+    if (frameIndex != animation.currentFrameIndex) {
+        animation.currentFrameIndex = frameIndex;
+        loadFrame(frameIndex);  // ✅ Load only the required frame
+    }
+
+    drawBitmap(animation.frameBuffer);
 }
+void loadFrame(int frameIndex) {
+    if (!current_animation.file) {
+        Serial.println("No file to load frame from!");
+        return;
+    }
+
+    Serial.print("Loading frame at index ");
+    Serial.println(frameIndex);
+
+    // ✅ Create a filter to extract only the required frame
+    StaticJsonDocument<128> filter;
+    filter["data"] = true;  // Load only the "data" field, NOT the whole JSON
+
+    // ✅ Reset file before loading JSON
+    current_animation.file.seek(0);
+
+    // ✅ Use a large enough buffer to store frame data
+    StaticJsonDocument<4096> frameDoc;
+
+    // ✅ Parse JSON using filter (isolates `data` field)
+    DeserializationError error = deserializeJson(frameDoc, current_animation.file, DeserializationOption::Filter(filter));
+
+    if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+
+    // ✅ Get the `data` array (all frames)
+    JsonArray frames = frameDoc["data"].as<JsonArray>();
+
+    if (frames.isNull()) {
+        Serial.println("Frame data is null!");
+        return;
+    }
+
+    // ✅ Get the requested frame
+    if (frameIndex >= frames.size()) {
+        Serial.println("Requested frame index is out of range!");
+        return;
+    }
+
+    JsonArray frame = frames[frameIndex].as<JsonArray>();
+
+    if (frame.isNull()) {
+        Serial.println("Frame is null!");
+        return;
+    }
+
+    if (frame.size() != 16 * 16) {
+        Serial.println("Frame has wrong dimensions: ");
+        Serial.println(frame.size());
+        return;
+    }
+
+    // ✅ Copy frame data into `frameBuffer`
+    for (size_t i = 0; i < 16 * 16; i++) {
+        const char* color = frame[i].as<const char*>();
+        current_animation.frameBuffer[i] = strtol(color + 1, NULL, 16);  // Convert "#RRGGBB" to CRGB
+    }
+
+    Serial.print("Successfully loaded frame ");
+    Serial.println(frameIndex);
+}
+
+
+
 
 void buttonToggled() {
   if (millis() - lastDebounceTime > debounce) {
@@ -147,45 +247,50 @@ void buttonToggled() {
       gallery.rewindDirectory();
       selectedFile = gallery.openNextFile();
     }
+    Serial.print(F("Selected file: "));
+    Serial.println(selectedFile.name());
 
-    current_animation = loadAnimation(selectedFile);
+    loadAnimation(selectedFile);
   }
 }
+void loadAnimation(File file) {
 
-Animation loadAnimation(File file) {
-  Animation animation;
+  if (current_animation.file) {
+    current_animation.file.close();
+  }
+  //Animation animation;
 
-  JsonDocument filter;
-  filter["data"] = true;
+  StaticJsonDocument<128> filter;
   filter["id"] = true;
   filter["timing"] = true;
-  filter["frame_amount"] = 1;
+  filter["frame_amount"] = true;
 
-  JsonDocument doc;
-
-  Serial.println(F("Opening Animation File"));
-  DeserializationError error = deserializeJson(doc, file, DeserializationOption::Filter(filter));
+  StaticJsonDocument<1024> metadata;
+  Serial.println(F("Deserializing metadata"));
+  DeserializationError error = deserializeJson(metadata, file, DeserializationOption::Filter(filter));
 
   if (error) {
     Serial.print("deserializeJson() failed: ");
     Serial.println(error.c_str());
-    return animation;
+    return;
   }
   Serial.println(F("Animation File deserialized, baking animation"));
 
-  int id = doc["id"];
-  int timing = doc["timing"];
-  JsonArray data = doc["data"];
-  int frame_amount = doc["frame_amount"];
+  current_animation.id = metadata["id"];
+  current_animation.timing = metadata["timing"];
+  current_animation.frame_amount = metadata["frame_amount"];
+  current_animation.file = file;  // Keep reference to the open file for dynamic frame loading
 
-  animation.id = id;
-  animation.timing = timing;
-  animation.frame_amount = frame_amount;
+  Serial.print("Loaded metadata for animation with ");
+  Serial.print(current_animation.frame_amount);
+  Serial.println(" frames.");
 
-  // Should not return JsonArray as it can point to dead mem.
-  animation.data = doc;
+  current_animation.currentFrameIndex = 0;
+  Serial.println("Loading frame:");
+  loadFrame(0);
+
   Serial.println("Finished creatring animation");
-  return animation;
+  return;
 }
 
 void loop() {
