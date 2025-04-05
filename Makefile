@@ -3,7 +3,7 @@ BOARD_FQBN = arduino:samd:nano_33_iot
 # Make sure PORT is properly set. Run `arduino-cli board list` to see the port of the connected board.
 PORT = /dev/ttyACM0
 SKETCH = Pixelmatrix.ino
-DEFINES = -DDEBUG_SERIAL  # Comment out to disable debugging
+#DEFINES = -DDEBUG_SERIAL  # Comment out to disable debugging
 
 # === COMMANDS ===
 ARDUINO_CLI = arduino-cli
